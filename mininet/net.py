@@ -91,6 +91,8 @@ import re
 import select
 import signal
 import random
+import shlex
+import ipaddress
 
 from sys import exit  # pylint: disable=redefined-builtin
 from time import sleep
@@ -99,8 +101,8 @@ from math import ceil
 
 from mininet.cli import CLI
 from mininet.log import info, error, debug, output, warn
-from mininet.node import ( Node, Host, OVSKernelSwitch, DefaultController,
-                           Controller )
+from mininet.node import ( Node, Isula, Host, OVSKernelSwitch, DefaultController,
+                           Controller, OVSSwitch, OVSBridge )
 from mininet.nodelib import NAT
 from mininet.link import Link, Intf
 from mininet.util import ( quietRun, fixLimits, numCores, ensureRoot,
@@ -108,8 +110,14 @@ from mininet.util import ( quietRun, fixLimits, numCores, ensureRoot,
                            waitListening, BaseString )
 from mininet.term import cleanUpScreens, makeTerms
 
+from subprocess import Popen
+
 # Mininet version: should be consistent with README and LICENSE
 VERSION = "2.3.0"
+
+# If an external SAP (Service Access Point) is made, it is deployed with this prefix in the name,
+# so it can be removed at a later time
+SAP_PREFIX = 'sap.'
 
 class Mininet( object ):
     "Network emulation with hosts spawned in network namespaces."
@@ -209,6 +217,13 @@ class Mininet( object ):
                 remaining.remove( switch )
         return not remaining
 
+    def getNextIp( self ):
+        ip = ipAdd( self.nextIP,
+                    ipBaseNum=self.ipBaseNum,
+                    prefixLen=self.prefixLen ) + '/%s' % self.prefixLen
+        self.nextIP += 1
+        return ip
+
     def addHost( self, name, cls=None, **params ):
         """Add host.
            name: name of host to add
@@ -233,6 +248,27 @@ class Mininet( object ):
         self.hosts.append( h )
         self.nameToNode[ name ] = h
         return h
+
+    def removeHost( self, name, **params):
+        """
+        Remove a host from the network at runtime.
+        """
+        if not isinstance( name, BaseString ) and name is not None:
+            name = name.name  # if we get a host object
+        try:
+            h = self.get(name)
+        except:
+            error("Host: %s not found. Cannot remove it.\n" % name)
+            return False
+        if h is not None:
+            if h in self.hosts:
+                self.hosts.remove(h)
+            if name in self.nameToNode:
+                del self.nameToNode[name]
+            h.stop( deleteIntfs=True )
+            debug("Removed: %s\n" % name)
+            return True
+        return False
 
     def delNode( self, node, nodes=None):
         """Delete node
@@ -406,6 +442,37 @@ class Mininet( object ):
         link = cls( node1, node2, **options )
         self.links.append( link )
         return link
+
+    def removeLink(self, link=None, node1=None, node2=None):
+        """
+        Removes a link. Can either be specified by link object,
+        or the nodes the link connects.
+        """
+        if link is None:
+            if (isinstance( node1, BaseString )
+                    and isinstance( node2, BaseString )):
+                try:
+                    node1 = self.get(node1)
+                except:
+                    error("Host: %s not found.\n" % node1)
+                try:
+                    node2 = self.get(node2)
+                except:
+                    error("Host: %s not found.\n" % node2)
+            # try to find link by nodes
+            for l in self.links:
+                if l.intf1.node == node1 and l.intf2.node == node2:
+                    link = l
+                    break
+                if l.intf1.node == node2 and l.intf2.node == node1:
+                    link = l
+                    break
+        if link is None:
+            error("Couldn't find link to be removed.\n")
+            return
+        # tear down the link
+        link.delete()
+        self.links.remove(link)
 
     def delLink( self, link ):
         "Remove a link from this network"
@@ -935,6 +1002,168 @@ class Mininet( object ):
         ensureRoot()
         fixLimits()
         cls.inited = True
+
+
+class Nestnet( Mininet ):
+    """
+    A Mininet with Docker related methods.
+    Inherits Mininet.
+    This class is not more than API beautification.
+    """
+
+    def __init__(self, topo=None, dimage=None, **params):
+        # call original Mininet.__init__ with build=False
+        # still provide any topo objects and init node lists
+        Mininet.__init__(self, build=False, **params)
+        self.SAPswitches = dict()
+        if topo and dimage:
+            self.buildFromTopo(topo, dimage)
+
+    def addDocker( self, name, cls=Isula, **params ):
+        """
+        Wrapper for addHost method that adds a
+        Docker container as a host.
+        """
+        return self.addHost( name, cls=cls, **params)
+
+    def removeDocker( self, name, **params):
+        """
+        Wrapper for removeHost. Just to be complete.
+        """
+        return self.removeHost(name, **params)
+
+
+    def addExtSAP(self, sapName, sapIP, dpid=None, **params):
+        """
+        Add an external Service Access Point, implemented as an OVSBridge
+        :param sapName:
+        :param sapIP: str format: x.x.x.x/x
+        :param dpid:
+        :param params:
+        :return:
+        """
+        SAPswitch = self.addSwitch(sapName, cls=OVSBridge, prefix=SAP_PREFIX,
+                       dpid=dpid, ip=sapIP, **params)
+        self.SAPswitches[sapName] = SAPswitch
+
+        NAT = params.get('NAT', False)
+        if NAT:
+            self.addSAPNAT(SAPswitch)
+
+        return SAPswitch
+
+    def buildFromTopo( self, topo=None, dimage=None ):
+        """
+        Build Containernet from a topology object. Overrides
+        buildFromTopo from Mininet class, since we need to invoke
+        addDocker here instead of addHost.
+        At the en of this function, everything should be connected
+        and up.
+        """
+
+        info( '*** Creating network\n' )
+
+        if not self.controllers and self.controller:
+            # Add a default controller
+            info( '*** Adding controller\n' )
+            classes = self.controller
+            if not isinstance( classes, list ):
+                classes = [ classes ]
+            for i, cls in enumerate( classes ):
+                # Allow Controller objects because nobody understands partial()
+                if isinstance( cls, Controller ):
+                    self.addController( cls )
+                else:
+                    self.addController( 'c%d' % i, cls )
+
+        info( '*** Adding Docker containers:\n' )
+        for hostName in topo.hosts():
+            self.addDocker( hostName, dimage=dimage, **topo.nodeInfo( hostName ) )
+            info( hostName + ' ' )
+
+        info( '\n*** Adding switches:\n' )
+        for switchName in topo.switches():
+            # A bit ugly: add batch parameter if appropriate
+            params = topo.nodeInfo( switchName )
+            cls = params.get( 'cls', self.switch )
+            self.addSwitch( switchName, **params )
+            info( switchName + ' ' )
+
+        info( '\n*** Adding links:\n' )
+        for srcName, dstName, params in topo.links(
+                sort=True, withInfo=True ):
+            self.addLink( **params )
+            info( '(%s, %s) ' % ( srcName, dstName ) )
+
+        info( '\n' )
+
+    def removeExtSAP(self, sapName):
+        SAPswitch = self.SAPswitches[sapName]
+        info( 'stopping external SAP:' + SAPswitch.name + ' \n' )
+        SAPswitch.stop()
+        SAPswitch.terminate()
+
+        self.removeSAPNAT(SAPswitch)
+
+
+    def addSAPNAT(self, SAPSwitch):
+        """
+        Add NAT to the Containernet, so external SAPs can reach the outside internet through the host
+        :param SAPSwitch: Instance of the external SAP switch
+        :param SAPNet: Subnet of the external SAP as str (eg. '10.10.1.0/30')
+        :return:
+        """
+        SAPip = SAPSwitch.ip
+        SAPNet = str(ipaddress.IPv4Network(unicode(SAPip), strict=False))
+        # due to a bug with python-iptables, removing and finding rules does not succeed when the mininet CLI is running
+        # so we use the iptables tool
+        # create NAT rule
+        rule0_ = "iptables -t nat -A POSTROUTING ! -o {0} -s {1} -j MASQUERADE".format(SAPSwitch.deployed_name, SAPNet)
+        p = Popen(shlex.split(rule0_))
+        p.communicate()
+
+        # create FORWARD rule
+        rule1_ = "iptables -A FORWARD -o {0} -j ACCEPT".format(SAPSwitch.deployed_name)
+        p = Popen(shlex.split(rule1_))
+        p.communicate()
+
+        rule2_ = "iptables -A FORWARD -i {0} -j ACCEPT".format(SAPSwitch.deployed_name)
+        p = Popen(shlex.split(rule2_))
+        p.communicate()
+
+        info("added SAP NAT rules for: {0} - {1}\n".format(SAPSwitch.name, SAPNet))
+
+
+    def removeSAPNAT(self, SAPSwitch):
+
+        SAPip = SAPSwitch.ip
+        SAPNet = str(ipaddress.IPv4Network(unicode(SAPip), strict=False))
+        # due to a bug with python-iptables, removing and finding rules does not succeed when the mininet CLI is running
+        # so we use the iptables tool
+        rule0_ = "iptables -t nat -D POSTROUTING ! -o {0} -s {1} -j MASQUERADE".format(SAPSwitch.deployed_name, SAPNet)
+        p = Popen(shlex.split(rule0_))
+        p.communicate()
+
+        rule1_ = "iptables -D FORWARD -o {0} -j ACCEPT".format(SAPSwitch.deployed_name)
+        p = Popen(shlex.split(rule1_))
+        p.communicate()
+
+        rule2_ = "iptables -D FORWARD -i {0} -j ACCEPT".format(SAPSwitch.deployed_name)
+        p = Popen(shlex.split(rule2_))
+        p.communicate()
+
+        info("remove SAP NAT rules for: {0} - {1}\n".format(SAPSwitch.name, SAPNet))
+
+
+    def stop(self):
+        super(Nestnet, self).stop()
+
+        info('*** Removing NAT rules of %i SAPs\n' % len(self.SAPswitches))
+        for SAPswitch in self.SAPswitches:
+            self.removeSAPNAT(self.SAPswitches[SAPswitch])
+        info("\n")
+
+
 
 
 class MininetWithControlNet( Mininet ):

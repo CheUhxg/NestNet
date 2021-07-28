@@ -1,0 +1,23 @@
+FROM centos:7
+
+# install required packages
+RUN yum install -y epel-release \
+    && yum update -y \
+    && yum install -y  ansible
+
+# install nestnet (using its Ansible playbook)
+COPY . /nestnet
+WORKDIR /nestnet/ansible
+RUN ansible-playbook -i "localhost," -c local --skip-tags "notindocker" install_centos.yml
+WORKDIR /nestnet
+RUN python3 setup.py develop
+
+# Hotfix: https://github.com/pytest-dev/pytest/issues/4770
+RUN pip3 install "more-itertools<=5.0.0"
+
+# tell nestnet that it runs in a container
+ENV NESTNET_NESTED 1
+
+# Important: This entrypoint is required to start the Docker and OVS service
+ENTRYPOINT ["util/docker/entrypoint_centos.sh"]
+CMD ["python3", "examples/nestnet_example.py"]

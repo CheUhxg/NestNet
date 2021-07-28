@@ -101,6 +101,7 @@ CLI = None  # Set below if needed
 # Locally defined tests
 def allTest( net ):
     "Run ping and iperf tests"
+    net.waitConnected()
     net.start()
     net.ping()
     net.iperf()
@@ -387,10 +388,10 @@ class MininetRunner( object ):
                            placement=PLACEMENT[ opts.placement ] )
             mininet.cli.CLI = ClusterCLI
 
-        # Wait for controllers to connect unless we're running null test
-        if ( opts.test and opts.test != [ 'none' ] and
-             isinstance( opts.wait, bool ) ):
-            opts.wait = True
+        # # Wait for controllers to connect unless we're running null test
+        # if ( opts.test and opts.test != [ 'none' ] and
+        #      isinstance( opts.wait, bool ) ):
+        #     opts.wait = True
 
         mn = Net( topo=topo,
                   switch=switch, host=host, controller=controller, link=link,

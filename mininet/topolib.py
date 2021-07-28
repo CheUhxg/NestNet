@@ -1,7 +1,7 @@
 "Library of potentially useful topologies for Mininet"
 
 from mininet.topo import Topo
-from mininet.net import Mininet
+from mininet.net import Mininet, Nestnet
 
 # The build() method is expected to do this:
 # pylint: disable=arguments-differ
@@ -36,6 +36,11 @@ def TreeNet( depth=1, fanout=2, **kwargs ):
     "Convenience function for creating tree networks."
     topo = TreeTopo( depth, fanout )
     return Mininet( topo, **kwargs )
+
+def TreeNestNet( depth=1, fanout=2, dimage="ubuntu:trusty", **kwargs ):
+    "Convenience function for creating tree networks with iSula."
+    topo = TreeTopo( depth, fanout )
+    return Nestnet( topo, dimage, **kwargs )
 
 
 class TorusTopo( Topo ):

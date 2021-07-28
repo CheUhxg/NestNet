@@ -51,6 +51,35 @@ def makeTerm( node, title='Node', term='xterm', display=None, cmd='bash'):
     if term not in cmds:
         error( 'invalid terminal type: %s' % term )
         return None
+    # iSula Hosts don't have DISPLAY. So instead of
+    # X11 tunnel, we use terminals from outside iSula
+    from mininet.node import Isula
+    if isinstance( node, Isula ):
+        if not node._is_container_running():
+            return []
+        if display is None:
+            cmds[ term ] = cmds[ term ][:-1]
+        else:
+            cmds[ term ].append(display)
+        cmds[term].append('-e')
+        from subprocess import Popen, PIPE
+        term = Popen( cmds[ term ] + 
+            [ 'env TERM=ansi isula exec -it %s.%s %s' % ( 
+            node.dnameprefix, node.name, cmd ) ], stdout=PIPE, stdin=PIPE, stderr=PIPE )
+        if term:
+            return [ term ]
+        # Failover alternative for iSula
+        # host = None --> Needs isula interface
+        # port = 6000
+        # from mininet.log import warn
+        # warn('Warning: iSula Exec Failed. Trying TCP Connection for Terminal\n')
+        # pipe = node.popen( [ 'socat', 'TCP-LISTEN:%d,fork,reuseaddr' % port,
+        #     'EXEC:\'%s\',pty,stderr,setsid,sigint,sane' % cmd ] );
+        # term = Popen( cmds[ term ] + 
+        #     [ 'socat FILE:`tty`,raw,echo=0 TCP:%s:%s' % (
+        #      host, port ) ], stdout=PIPE, stdin=PIPE, stderr=PIPE )
+        # return [ pipe, term ] if pipe else [ term ]
+        return []
     display, tunnel = tunnelX11( node, display )
     if display is None:
         return []

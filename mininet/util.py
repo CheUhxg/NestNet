@@ -246,15 +246,12 @@ def makeIntfPair( intf1, intf2, addr1=None, addr2=None, node1=None, node2=None,
        deleteIntfs: delete intfs before creating them
        runCmd: function to run shell commands (quietRun)
        raises Exception on failure"""
-    if not runCmd:
-        runCmd = quietRun if not node1 else node1.cmd
-        runCmd2 = quietRun if not node2 else node2.cmd
     if deleteIntfs:
         # Delete any old interfaces with the same names
-        runCmd( 'ip link del ' + intf1 )
-        runCmd2( 'ip link del ' + intf2 )
-    # Create new pair
-    netns = 1 if not node2 else node2.pid
+        quietRun( 'ip link del ' + intf1, shell=True )
+        quietRun( 'ip link del ' + intf2, shell=True )
+
+    # first: create the veth pair in default namespace
     if addr1 is None and addr2 is None:
         cmdOutput = runCmd( 'ip link add name %s '
                             'type veth peer name %s '
