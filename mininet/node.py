@@ -57,7 +57,7 @@ import pty
 import re
 import signal
 import select
-import isula    # Need to build
+from isula import isula    # Need to build
 import json
 from distutils.version import StrictVersion
 from re import findall
