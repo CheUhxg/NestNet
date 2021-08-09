@@ -32,6 +32,28 @@ def name_to_id(name):
             return container.id
 
 
+def remove_container(container_id):
+    stub = connect()[0]
+
+    list_con_resp = stub.ListContainers(api_pb2.ListContainersRequest())
+
+    for container in list_con_resp.containers:
+        if container_id == container.id:
+            stub.StopPodSandbox(api_pb2.StopPodSandboxRequest(pod_sandbox_id=container.pod_sandbox_id))
+            stub.RemovePodSandbox(api_pb2.RemovePodSandboxRequest(pod_sandbox_id=container.pod_sandbox_id))
+            return True
+
+
+def is_container_running(container_id):
+    stub = connect()[0]
+
+    list_con_resp = stub.ListContainers(api_pb2.ListContainersRequest())
+    for container in list_con_resp.containers:
+        if container_id == container.id:
+            return True
+    return False
+
+
 # get list of images:test ok
 def pull_image(image_name):
     stub = connect()[1]
@@ -69,30 +91,6 @@ def clean():
 def runcontainer(name, config):
     stub = connect()[0]
 
-    # config = {
-    #     'privileged': False,
-    #     'pod_privileged': True,
-    #     'volumes': [],
-    #     'cpu_quota': -1,
-    #     'cpu_period': None,
-    #     'cpu_shares': None,
-    #     'cpuset_cpus': None,
-    #     'mem_limit': None,
-    #     'dns_servers': [],
-    #     'dns_searches': [],
-    #     'dns_options': [],
-    #     'devices_con_path': None,
-    #     'device_host_path': None,
-    #     'device_permissions': None,
-    #     'hostname': None,
-    #     'sysctls': {},
-    #     'cap_add':['net_admin'],
-    #     'cmd': '/bin/bash',
-    #     'tty': True,
-    #     'image': 'alpine',
-    # }
-
-    # if container name is in use,remove that container
     list_con_resp = stub.ListContainers(api_pb2.ListContainersRequest())
 
     for container in list_con_resp.containers:
@@ -181,8 +179,8 @@ def update_resourse(name,Resource):
         'cpu_shares': None,
         'cpuset_cpus': None,
         'mem_limit': None,
-        'oom_score_adj':None,
-        'cpuset_mems':None
+        'oom_score_adj': None,
+        'cpuset_mems': None
     }
 
     default_res.update(Resource)

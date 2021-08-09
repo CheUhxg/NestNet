@@ -23,7 +23,7 @@ from nestnet.clean import cleanup
 import nestnet.cli
 from nestnet.log import lg, LEVELS, info, debug, warn, error, output
 from nestnet.net import Containernet, Mininet, MininetWithControlNet, VERSION
-from nestnet.node import ( Host, Docker, CPULimitedHost, Controller, OVSController,
+from nestnet.node import ( Host, Isula, CPULimitedHost, Controller, OVSController,
                            Ryu, NOX, RemoteController, findController,
                            DefaultController, NullController,
                            UserSwitch, OVSSwitch, OVSBridge,

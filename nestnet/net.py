@@ -100,7 +100,7 @@ from math import ceil
 
 from nestnet.cli import CLI
 from nestnet.log import info, error, debug, output, warn
-from nestnet.node import ( Node, Docker, Host, OVSKernelSwitch,
+from nestnet.node import ( Node, Isula, Host, OVSKernelSwitch,
                            DefaultController, Controller, OVSSwitch, OVSBridge )
 from nestnet.nodelib import NAT
 from nestnet.link import Link, Intf
@@ -219,7 +219,7 @@ class Mininet( object ):
         self.nextIP += 1
         return ip
 
-    def addHost( self, name, cls=None, **params ):
+    def addHost( self, name, cls=None, Config=None, **params):
         """Add host.
            name: name of host to add
            cls: custom host class/constructor (optional)
@@ -239,7 +239,7 @@ class Mininet( object ):
         defaults.update( params )
         if not cls:
             cls = self.host
-        h = cls( name, **defaults )
+        h = cls( name, Config, **defaults )
         self.hosts.append( h )
         self.nameToNode[ name ] = h
         return h
@@ -1053,12 +1053,12 @@ class Containernet( Mininet ):
         if topo and dimage:
             self.buildFromTopo(topo, dimage)
 
-    def addDocker( self, name, cls=Docker, **params ):
+    def addDocker( self, name, cls=Isula, config=None,**params ):
         """
         Wrapper for addHost method that adds a
         Docker container as a host.
         """
-        return self.addHost( name, cls=cls, **params)
+        return self.addHost( name, cls=cls ,Config=config,**params)
 
     def removeDocker( self, name, **params):
         """
