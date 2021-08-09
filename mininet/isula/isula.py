@@ -1,91 +1,222 @@
-import grpc,re,random
-import api_pb2
-import api_pb2_grpc
+import grpc, os
+import mininet.isula.api_pb2
+import mininet.isula.api_pb2_grpc
+from mininet.isula import api_pb2_grpc, api_pb2
+
+from mininet.log import info, error, warn, debug
+
 
 # connect to isula rpc service:test ok
 def connect():
-    # 连接 rpc 服务器
+    # connect to rpc service
     channel = grpc.insecure_channel('unix:///var/run/isulad.sock')
-    # 调用 rpc 服务
+    #  rpc server
     runtime_stub = api_pb2_grpc.RuntimeServiceStub(channel)
     image_stub = api_pb2_grpc.ImageServiceStub(channel)
-    return runtime_stub,image_stub
+    return runtime_stub, image_stub
 
-# get version of runtime:test ok
+
+# get version of runtime:testok
 def version():
-    stub=connect()[0]
+    stub = connect()[0]
     response = stub.Version(api_pb2.VersionRequest())
-    print( response)
-
-# get list of containers:error failed to parse the sandbox name
-def containers():
-    stub=connect()[0]
-    response = stub.ListContainers(api_pb2.ListContainersRequest())
     return response
+
+
+def name_to_id(name):
+    stub=connect()[0]
+
+    list_con_resp = stub.ListContainers(api_pb2.ListContainersRequest())
+    for container in list_con_resp.containers:
+        if name == container.metadata.name:
+            return container.id
 
 
 # get list of images:test ok
-def images():
-    stub=connect()[1]
-    response = stub.ListImages(api_pb2.ListImagesRequest())
-    print(response)
+def pull_image(image_name):
+    stub = connect()[1]
+    if ':' not in image_name:
+        image_name += ':latest'
+    exist = False
 
-# pull image:test ok
-def pullimage():
-    stub=connect()[1]
-    response = stub.PullImage(api_pb2.PullImageRequest(image=api_pb2.ImageSpec(image="ubuntu")))
-    print(response)
+    listimage_rep = stub.ListImages(api_pb2.ListImagesRequest())
 
-def createcontainer():
-    random_number = random.randint(100000000,1000000000)
-    resp = runpodsandbox(random_number)
-    
-    pattern = re.compile('"(.*)"')
-    pod_sandbox_id = pattern.findall(str(resp))[0]
+    for image in listimage_rep.images:
+        if image_name in str(image.repo_tags):
+            exist=True
+            break
 
-    stub=connect()[0]
-    name = "ubuntu"+str(random_number)
-    metadata = api_pb2.ContainerMetadata(name=name)
-    image = api_pb2.ImageSpec(image="ubuntu")
-    config = api_pb2.ContainerConfig(metadata=metadata,image=image)
-    container_id = stub.CreateContainer(api_pb2.CreateContainerRequest(pod_sandbox_id=pod_sandbox_id, config=config))
-    
-    print(container_id)
+    if not exist:
+        try:
+            info('image "%s" not found,Trying to pull image' % image_name)
+            pull_rep = stub.PullImage(api_pb2.PullImageRequest(image=api_pb2.ImageSpec(image=image_name)))
+            return True
+        except BaseException:
+            error("Pull error: %s" % pull_rep)
+    else:
+        return True
 
-def removecontainer(container_id):
-    stub=connect()[0]
-    response = stub.RemoveContainer(api_pb2.RemoveContainerRequest(container_id=container_id))
-    print(response)
 
-# get list of pod: test ok
-def showpodsandbox():
-    stub=connect()[0]
-    response = stub.ListPodSandbox(api_pb2.ListPodSandboxRequest())
-    print(response)
+def clean():
+    stub = connect()[0]
+    list_Pod_resp = stub.ListPodSandbox(api_pb2.ListPodSandboxRequest())
+    for Pod in list_Pod_resp.items:
+        stub.StopPodSandbox(api_pb2.StopPodSandboxRequest(pod_sandbox_id=Pod.id))
+        stub.RemovePodSandbox(api_pb2.RemovePodSandboxRequest(pod_sandbox_id=Pod.id))
 
-# create and run podsandbox:
-def runpodsandbox(random_number):
-    stub=connect()[0]
-    sandboxConfig = api_pb2.PodSandboxConfig(
-        metadata=api_pb2.PodSandboxMetadata(name="ubuntu-sandbox"+str(random_number), namespace="test"),
-        dns_config=api_pb2.DNSConfig(servers=["3.3.3.3"], searches=["google.com"])
+
+# create and run podsandbox the create containers:
+def runcontainer(name, config):
+    stub = connect()[0]
+
+    # config = {
+    #     'privileged': False,
+    #     'pod_privileged': True,
+    #     'volumes': [],
+    #     'cpu_quota': -1,
+    #     'cpu_period': None,
+    #     'cpu_shares': None,
+    #     'cpuset_cpus': None,
+    #     'mem_limit': None,
+    #     'dns_servers': [],
+    #     'dns_searches': [],
+    #     'dns_options': [],
+    #     'devices_con_path': None,
+    #     'device_host_path': None,
+    #     'device_permissions': None,
+    #     'hostname': None,
+    #     'sysctls': {},
+    #     'cap_add':['net_admin'],
+    #     'cmd': '/bin/bash',
+    #     'tty': True,
+    #     'image': 'alpine',
+    # }
+
+    # if container name is in use,remove that container
+    list_con_resp = stub.ListContainers(api_pb2.ListContainersRequest())
+
+    for container in list_con_resp.containers:
+        if name == container.metadata.name:
+            # stub.RemoveContainer(api_pb2.RemoveContainerRequest(container.id))
+            stub.StopPodSandbox(api_pb2.StopPodSandboxRequest(pod_sandbox_id=container.pod_sandbox_id))
+            stub.RemovePodSandbox(api_pb2.RemovePodSandboxRequest(pod_sandbox_id=container.pod_sandbox_id))
+            break
+
+    pull_image(config['image'])
+
+    # create pod
+    pod_name=name+'sandbox'
+
+    LinuxPodSecContext = api_pb2.LinuxSandboxSecurityContext(
+        privileged=config['pod_privileged']
     )
-    response = stub.RunPodSandbox(api_pb2.RunPodSandboxRequest(config=sandboxConfig))
-    return response
 
-def removepodsandbox(pod_sandbox_id):
-    stub=connect()[0]
-    response = stub.RemovePodSandbox(api_pb2.RemovePodSandboxRequest(pod_sandbox_id=pod_sandbox_id))
-    print(response)
+    linuxPodCof = api_pb2.LinuxPodSandboxConfig(
+        security_context = LinuxPodSecContext,
+        sysctls = config['sysctls']
+    )
 
-if  __name__ == '__main__':
-    # images()
-    # showpodsandbox()
-    # pullimage()
-    conts = str(containers())
-    pattern = re.compile('  id: "(.*)"')
-    for contid in pattern.findall(conts):
-        print(contid)
-        # removecontainer(contid)
-    # createcontainer()
-    # removepodsandbox('b2b6ae97195a84d5ffbce51f32b8761c0da60d1ec2167e834c31963b71d79553')
+    sandboxConfig = api_pb2.PodSandboxConfig(
+        metadata=api_pb2.PodSandboxMetadata(name=pod_name, namespace="test"),
+        dns_config=api_pb2.DNSConfig(servers=config['dns_servers'], searches=config['dns_searches']),
+        hostname=config['hostname'],
+        linux=linuxPodCof
+    )
+    podsandbox_rep = stub.RunPodSandbox(api_pb2.RunPodSandboxRequest(config=sandboxConfig))
+
+    cap_add = api_pb2.Capability(
+        add_capabilities=config['cap_add']
+    )
+
+    linuxContainerSecuContext = api_pb2.LinuxContainerSecurityContext(
+        privileged=config['privileged'],
+        capabilities=cap_add
+    )
+
+    linuxContainerRes = api_pb2.LinuxContainerResources(
+        cpu_period=config['cpu_period'],
+        cpu_quota=config['cpu_quota'],
+        cpu_shares=config['cpu_shares'],
+        memory_limit_in_bytes=config['mem_limit'],
+        cpuset_cpus=config['cpuset_cpus']
+    )
+
+    linuxContainerconf = api_pb2.LinuxContainerConfig(
+        resources=linuxContainerRes,
+        security_context=linuxContainerSecuContext
+    )
+
+    # create container
+    containerConfig = api_pb2.ContainerConfig(
+        metadata=api_pb2.ContainerMetadata(name=name),
+        image=api_pb2.ImageSpec(image=config['image']),
+        command=config['cmd'],
+        # devices=api_pb2.Device(container_path=config['device_con_path'],
+        #                        host_path=config['device_host_path'],
+        #                        permissions=config['device_permissions']),
+        tty=config['tty'],
+        linux=linuxContainerconf
+    )
+
+    container_resp = stub.CreateContainer(api_pb2.CreateContainerRequest(
+        pod_sandbox_id=podsandbox_rep.pod_sandbox_id,
+        config=containerConfig,
+        sandbox_config=sandboxConfig,
+    ))
+
+    # start container
+    start_resp = stub.StartContainer(api_pb2.StartContainerRequest(container_id=container_resp.container_id))
+
+    return container_resp
+
+
+def update_resourse(name,Resource):
+    stub = connect()[0]
+
+    container_id = name_to_id(name)
+
+    default_res = {
+        'cpu_quota': -1,
+        'cpu_period': None,
+        'cpu_shares': None,
+        'cpuset_cpus': None,
+        'mem_limit': None,
+        'oom_score_adj':None,
+        'cpuset_mems':None
+    }
+
+    default_res.update(Resource)
+
+    ContainerResources = api_pb2.LinuxContainerResources(
+        cpu_period=default_res['cpu_period'],
+        cpu_quota=default_res['cpu_quota'],
+        cpu_shares=default_res['cpu_shares'],
+        memory_limit_in_bytes=default_res['mem_limit'],
+        oom_score_adj=default_res['oom_score_adj'],
+        cpuset_cpus=default_res['cpuset_cpus'],
+        cpuset_mems=default_res['cpuset_mems']
+    )
+
+    stub.UpdateContainerResources(api_pb2.UpdateContainerResourcesRequest(container_id=container_id, linux=ContainerResources))
+
+
+def get_status(container_id):
+    stub = connect()[0]
+    container_status = stub.ListContainers(api_pb2.ListContainersRequest(filter=api_pb2.ContainerFilter(id=container_id)))
+
+    con_info= {'id': container_status.containers[0].id,
+               'pod_sandbox_id': container_status.containers[0].pod_sandbox_id,
+               'name': container_status.containers[0].metadata.name,
+               'image': container_status.containers[0].image.image,
+               'image_info': container_status.containers[0].image_ref,
+               'created_at':container_status.containers[0].created_at}
+    con_info.update(container_status.containers[0].annotations)
+
+    return con_info
+
+
+def inspect_image(imagename):
+    stub=connect()[1]
+    image=api_pb2.ImageSpec(image=imagename)
+    imageinfo = stub.ImageStatus(api_pb2.ImageStatusRequest(image=image))
+
