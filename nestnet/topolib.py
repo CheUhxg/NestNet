@@ -1,7 +1,7 @@
 "Library of potentially useful topologies for Mininet"
 
 from nestnet.topo import Topo
-from nestnet.net import Mininet, Containernet
+from nestnet.net import Mininet, Nestnet
 
 
 # The build() method is expected to do this:

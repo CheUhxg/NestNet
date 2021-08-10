@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-查看命令行参数: sudo mn -h
+查看命令行参数: sudo nn -h
 
-使用定制网络: sudo mn --custom ~/mininet/custom/custom_example.py
+使用定制网络: sudo nn --custom ~/mininet/custom/custom_example.py
 """
 
 import os
@@ -21,7 +21,7 @@ if 'PYTHONPATH' in os.environ:
 from nestnet.clean import cleanup
 import nestnet.cli
 from nestnet.log import lg, LEVELS, info, debug, warn, error, output
-from nestnet.net import Containernet, Mininet, MininetWithControlNet, VERSION
+from nestnet.net import Nestnet, Mininet, MininetWithControlNet, VERSION
 from nestnet.node import ( Host, Isula, CPULimitedHost, Controller, OVSController,
                            Ryu, NOX, RemoteController, findController,
                            DefaultController, NullController,
@@ -32,7 +32,7 @@ from nestnet.link import Link, TCLink, TCULink, OVSLink
 from nestnet.topo import ( SingleSwitchTopo, LinearTopo,
                            SingleSwitchReversedTopo, MinimalTopo )
 from nestnet.topolib import TreeTopo, TorusTopo
-from nestnet.util import customClass, specialClass, splitArgs, buildTopo
+from nestnet.util import customClass, specialClass, splitArgs, buildTopo, configContainer
 
 # 用于实验的集群原型
 from nestnet.examples.cluster import ( MininetCluster, RemoteHost,
@@ -108,9 +108,9 @@ TESTS.update( all=allTest, none=nullTest, build=nullTest )
 ALTSPELLING = { 'pingall': 'pingAll', 'pingpair': 'pingPair',
                 'iperfudp': 'iperfUdp' }
 
-def runTests( mn, args ):
+def runTests( nn, args ):
     """运行测试
-       mn: Mininet对象
+       nn: Mininet对象
        arg: 测试选项列表 """
     # 将选项分成测试名称和参数
     for arg in args:
@@ -120,9 +120,9 @@ def runTests( mn, args ):
             test = ALTSPELLING.get( test.lower(), test )
             testfn = TESTS.get( test, test )
             if callable( testfn ):
-                testfn( mn, *args, **kwargs )
-            elif hasattr( mn, test ):
-                getattr( mn, test )( *args, **kwargs )
+                testfn( nn, *args, **kwargs )
+            elif hasattr( nn, test ):
+                getattr( nn, test )( *args, **kwargs )
             else:
                 raise Exception( 'Test %s is unknown - please specify one of '
                                  '%s ' % ( test, TESTS.keys() ) )
@@ -268,15 +268,13 @@ class MininetRunner( object ):
                          metavar='block|random',
                          help=( 'node placement for --cluster '
                                 '(experimental!) ' ) )
-        # parser.add_argument( '--isula', action='store_true',
-        #                  default='../examples/containernet_example.py',
-        #                  help='read container classes or params from .py file(s)')
+        parser.add_argument( '--config', action='store',
+                         help='read container classes or params from .py file(s)')
 
         self.args = parser.parse_args()
-        args = vars(self.args)
         # 运行函数处理参数
-        if args['custom']:
-            self.custom(args['custom'])
+        if self.args.custom:
+            self.custom(self.args.custom)
 
     def setup( self ):
         "设置和验证环境."
@@ -338,10 +336,9 @@ class MininetRunner( object ):
         link = customClass( LINKS, args.link )
         
         if args.host == 'isula':
-            Net = Containernet
-            mn = Net( topo=topo, config={'image':'ubuntu:trusty',
-                    'cmd':['/bin/bash',]
-                    },
+            config = configContainer( args.config )
+            Net = Nestnet
+            nn = Net( topo=topo, config=config,
                     switch=switch, host=host, controller=controller, link=link,
                     ipBase=args.ipbase, inNamespace=args.innamespace,
                     xterms=args.xterms, autoSetMacs=args.mac,
@@ -367,7 +364,7 @@ class MininetRunner( object ):
                             placement=PLACEMENT[ args.placement ] )
                 nestnet.cli.CLI = ClusterCLI
             
-            mn = Net( topo=topo,
+            nn = Net( topo=topo,
                     switch=switch, host=host, controller=controller, link=link,
                     ipBase=args.ipbase, inNamespace=args.innamespace,
                     xterms=args.xterms, autoSetMacs=args.mac,
@@ -378,19 +375,19 @@ class MininetRunner( object ):
         CLI = nestnet.cli.CLI if CLI is None else CLI
 
         if args.pre:
-            CLI( mn, script=args.pre )
+            CLI( nn, script=args.pre )
 
-        mn.start()
+        nn.start()
 
         if args.test:
-            runTests( mn, args.test )
+            runTests( nn, args.test )
         else:
-            CLI( mn )
+            CLI( nn )
 
         if args.post:
-            CLI( mn, script=args.post )
+            CLI( nn, script=args.post )
 
-        mn.stop()
+        nn.stop()
 
         elapsed = float( time.time() - start )
         info( 'completed in %0.3f seconds\n' % elapsed )

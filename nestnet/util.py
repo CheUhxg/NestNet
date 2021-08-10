@@ -12,6 +12,7 @@ from os import O_NONBLOCK
 import os
 from functools import partial
 import sys
+import json
 
 # Python 2/3 compatibility
 Python3 = sys.version_info[0] == 3
@@ -629,6 +630,29 @@ def splitArgs(argstr):
         kwargs[key] = makeNumeric(val)
     return fn, args, kwargs
 
+def configContainer( configStr ) -> dict:
+    "解析容器的配置文件为字典集形式"
+    try:
+        if os.path.isfile( configStr ) and '.json' in configStr:
+            with open(configStr, 'r') as fp:
+                config = json.load(fp)
+                if isinstance( config, dict ):
+                    attrs = ['privileged', 'pod_privileged', 'volumes', \
+                                'cpu_quota', 'cpu_period', 'cpu_shares', 'cpuset_cpus',\
+                                'cpuset_mems', 'mem_limit', 'dns_servers', 'dns_searches',\
+                                'dns_options', 'mount', 'hostname', 'cap_add', 'tty', 'image']
+                    for key in config.keys():
+                        if key not in attrs:
+                            raise AttributeError
+                    return config
+        else:
+            raise TypeError
+    except TypeError:
+        error( '*** Config must be a valid JSON file.\n' )
+        exit( 1 )
+    except AttributeError:
+        error( '*** Config attribute must be valid.\n' )
+        exit( 1 )
 
 def customClass(classes, argStr):
     """Return customized class based on argStr
