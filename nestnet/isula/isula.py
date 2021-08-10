@@ -1,7 +1,8 @@
 import grpc, os
-import mininet.isula.api_pb2
-import mininet.isula.api_pb2_grpc
-from mininet.isula import api_pb2_grpc, api_pb2
+# import nestnet.isula.api_pb2
+# import nestnet.isula.api_pb2_grpc
+# import api_pb2,api_pb2_grpc
+from nestnet.isula import api_pb2_grpc, api_pb2
 
 from mininet.log import info, error, warn, debug
 
@@ -218,3 +219,29 @@ def inspect_image(imagename):
     image=api_pb2.ImageSpec(image=imagename)
     imageinfo = stub.ImageStatus(api_pb2.ImageStatusRequest(image=image))
 
+
+# if __name__=='__main__':
+#     defaults = {
+#             'privileged': False,
+#             'pod_privileged': True,
+#             'volumes': [],
+#             'cpu_quota': -1,
+#             'cpu_period': None,
+#             'cpu_shares': None,
+#             'cpuset_cpus': None,
+#             'mem_limit': None,
+#             'dns_servers': [],
+#             'dns_searches': [],
+#             'dns_options': [],
+#             # 'device_con_path': '/',
+#             # 'device_host_path': '/',
+#             # 'device_permissions': 'r',
+#             'mount': {},
+#             'hostname': None,
+#             'sysctls': {},
+#             'cap_add': ['net_admin', ],
+#             'cmd': ['/bin/sh', ],
+#             'tty': True,
+#             'image': 'alpine'
+#         }
+#     runcontainer('tt',defaults)

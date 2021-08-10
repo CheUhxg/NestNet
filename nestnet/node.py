@@ -63,7 +63,7 @@ import time
 from subprocess import Popen, PIPE, check_output
 from time import sleep
 
-from nestnet.isula import isula
+import nestnet.isula.isula as isula
 from nestnet.log import info, error, warn, debug
 from nestnet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
                            numCores, retry, mountCgroups, BaseString, decode,
@@ -85,7 +85,7 @@ class Node(object):
            inNamespace: in network namespace?
            privateDirs: list of private directory strings or tuples
            params: Node parameters (see config() for details)"""
-
+        
         # Make sure class actually works
         self.checkSetup()
 
@@ -107,13 +107,16 @@ class Node(object):
         self.ports = {}
 
         self.nameToIntf = {}  # dict of interface names to Intfs
-
+        
         # Make pylint happy
         (self.shell, self.execed, self.pid, self.stdin, self.stdout,
          self.lastPid, self.lastCmd, self.pollOut) = (
             None, None, None, None, None, None, None, None)
         self.waiting = False
         self.readbuf = ''
+
+        # # Incremental decoder for buffered reading
+        # self.decoder = getincrementaldecoder()
 
         # Start command interpreter shell
         self.master, self.slave = None, None  # pylint
@@ -243,8 +246,8 @@ class Node(object):
            size: maximum number of characters to return"""
         count = len(self.readbuf)
         if count < size:
-            data = os.read(self.stdout.fileno(), size - count)
-            self.readbuf += self.decoder.decode(data)
+            data = decode( os.read( self.stdout.fileno(), size - count ) )
+            self.readbuf += data
         if size >= len(self.readbuf):
             result = self.readbuf
             self.readbuf = ''
@@ -706,6 +709,7 @@ class Isula(Host):
             'cpu_period': None,
             'cpu_shares': None,
             'cpuset_cpus': None,
+            'cpuset_mems':None,
             'mem_limit': None,
             'dns_servers': [],
             'dns_searches': [],
@@ -716,10 +720,10 @@ class Isula(Host):
             'mount': {},
             'hostname': None,
             'sysctls': {},
-            'cap_add': ['net_admin', ],
+            'cap_add': ['net_admin',],
             'cmd': ['/bin/sh', ],
             'tty': True,
-            'image': 'alpine'
+            'image': 'ubuntu:trusty'
         }
         if config is not None:
             defaults.update(config)
@@ -727,9 +731,9 @@ class Isula(Host):
         if ':' not in defaults['image']:
             defaults['image'] += ':latest'
 
-        self.dimage = config['image']
+        self.dimage = defaults['image']
         self.dnameprefix = "mn"
-        self.dcmd = config['cmd']
+        self.dcmd = defaults['cmd']
         self.dc = None
         self.dcinfo = None
         self.did = None
@@ -748,25 +752,25 @@ class Isula(Host):
 
         self.volumes = defaults['volumes']
         self.dns = defaults['dns_servers'] + defaults['dns_searches'] + defaults['dns_options']
-        self.devices = defaults['devices']
+        # self.devices = defaults['devices']
         self.cap_add = defaults['cap_add']
         self.sysctls = defaults['sysctls']
 
         # for image information
-        self.d_client = isula.from_env()
+        self.d_client = docker.from_env()
         self.dcli = self.d_client.api
 
-        # for DEBUG ???? 作用？
         debug("Created isula container object %s\n" % name)
         debug("image: %s\n" % str(self.dimage))
         debug("dcmd: %s\n" % str(self.dcmd))
         info("%s: kwargs %s\n" % (name, str(kwargs)))
 
         # create and run container
-        self.dc = isula.runcontainer(name, config)
-
+        self.dc = isula.runcontainer(name, defaults)
+        
         # fetch information about new container
         self.dcinfo = isula.get_status(self.dc.container_id)
+        
         self.did = self.dc.container_id
 
         Host.__init__(self, name, **kwargs)
@@ -775,7 +779,7 @@ class Isula(Host):
         self.slave = None
 
     def start(self):
-        # Nestnet ignores the CMD field of the Dockerfile.
+        # Nestnet ignores the CMD field of the Dockerfile.def start
         # Lets try to load it here and manually execute it once the
         # container is started and configured by Nestnet:
         cmd_field = self.get_cmd_field(self.dimage)
@@ -849,11 +853,12 @@ class Isula(Host):
         # bash -i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
         # prompt is set to sentinel chr( 127 )
-        cmd = ['isula', 'exec', '-it', '%s.%s' % (self.dnameprefix, self.name), 'env', 'PS1=' + chr(127),
+        cmd = ['isula', 'exec', '-it', '%s' % (self.did), 'env', 'PS1=' + chr(127),
                'bash', '--norc', '-is', 'mininet:' + self.name]
         # Spawn a shell subprocess in a pseudo-tty, to disable buffering
         # in the subprocess and insulate it from signals (e.g. SIGINT)
         # received by the parent
+        
         self.master, self.slave = pty.openpty()
         self.shell = self._popen(cmd, stdin=self.slave, stdout=self.slave, stderr=self.slave,
                                  close_fds=False)
@@ -872,18 +877,19 @@ class Isula(Host):
         self.lastPid = None
         self.readbuf = ''
         # Wait for prompt
+        print('dsaffds')
         while True:
             data = self.read(1024)
+            print(data)
             if data[-1] == chr(127):
-                break
-            self.pollOut.poll()
-        self.waiting = False
-        # +m: disable job control notification
+                break          
+            self.pollOut.poll()  
+        print('dddd')
         self.cmd('unset HISTFILE; stty -echo; set +m')
 
     def _get_volume_mount_name(self, volume_str):
         """ Helper to extract mount names from volume specification strings """
-        parts = volume_str.split(":")
+        parts = volume_str.splitself.pid(":")
         if len(parts) < 3:
             return None
         return parts[1]
@@ -927,10 +933,15 @@ class Isula(Host):
         return self.waitOutput(verbose)
 
     def _get_pid(self):
-        state = self.dcinfo.get("State", None)
-        if state:
-            return state.get("Pid", -1)
-        return -1
+        con_status=os.popen("sudo isula inspect %s"%self.did)
+        con_text=con_status.read()
+        pid=re.search("(?<=\"Pid\": ).*?(?=,)",con_text)
+        return pid.group()
+        # print(self.dcinfo)
+        # state = self.dcinfo.get("State", None)
+        # if state:
+        #     return state.get("Pid", -1)
+        # return -1
 
     def _check_shell(self):
         """Verify if shell is alive and
@@ -941,7 +952,7 @@ class Isula(Host):
                 if self.shell.returncode is not None:
                     debug("*** Shell died for isula host \'%s\'!\n" % self.name)
                     self.shell = None
-                    debug("*** Restarting Shell of isula host \'%s\'!\n" % self.name)
+                    debug("*** Restarting Shelself.pidl of isula host \'%s\'!\n" % self.name)
                     self.startShell()
             else:
                 debug("*** Restarting Shell of isula host \'%s\'!\n" % self.name)

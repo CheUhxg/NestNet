@@ -239,6 +239,7 @@ class Mininet( object ):
         defaults.update( params )
         if not cls:
             cls = self.host
+        
         h = cls( name, Config, **defaults )
         self.hosts.append( h )
         self.nameToNode[ name ] = h
@@ -1045,13 +1046,13 @@ class Containernet( Mininet ):
     This class is not more than API beautification.
     """
 
-    def __init__(self, topo=None, dimage=None, **params):
+    def __init__(self, topo=None, config=None, **params):
         # call original Mininet.__init__ with build=False
         # still provide any topo objects and init node lists
         Mininet.__init__(self, build=False, **params)
         self.SAPswitches = dict()
-        if topo and dimage:
-            self.buildFromTopo(topo, dimage)
+        if topo and config:
+            self.buildFromTopo(topo, config)
 
     def addDocker( self, name, cls=Isula, config=None,**params ):
         """
@@ -1086,7 +1087,7 @@ class Containernet( Mininet ):
 
         return SAPswitch
 
-    def buildFromTopo( self, topo=None, dimage=None ):
+    def buildFromTopo( self, topo=None, config=None ):
         """
         Build Containernet from a topology object. Overrides
         buildFromTopo from Mininet class, since we need to invoke
@@ -1111,7 +1112,7 @@ class Containernet( Mininet ):
 
         info( '*** Adding Docker containers:\n' )
         for hostName in topo.hosts():
-            self.addDocker( hostName, dimage=dimage, **topo.nodeInfo( hostName ) )
+            self.addDocker( hostName, config=config, **topo.nodeInfo( hostName ) )
             info( hostName + ' ' )
 
         info( '\n*** Adding switches:\n' )

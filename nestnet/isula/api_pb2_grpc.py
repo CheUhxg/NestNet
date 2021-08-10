@@ -2,7 +2,8 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import api_pb2 as api__pb2
+import nestnet.isula.api_pb2 as api__pb2
+# import api_pb2 as api__pb2
 
 
 class RuntimeServiceStub(object):
@@ -14,7 +15,7 @@ class RuntimeServiceStub(object):
     option (gogoproto.marshaler_all) = true;
     option (gogoproto.sizer_all) = true;
     option (gogoproto.unmarshaler_all) = true;
-    option (gogoproto.goproto_unrecognized_all) = false;
+    option (gogoproto.goproto_unrecognized_all) = false;api_papi_p
 
     Runtime service defines the public APIs for remote container runtimes
     """

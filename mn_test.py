@@ -65,7 +65,7 @@ SWITCHES = { 'user': UserSwitch,
 
 HOSTDEF = 'proc'
 HOSTS = { 'proc': Host,
-          'docker': Docker,
+          'isula': Isula,
           'rt': specialClass( CPULimitedHost, defaults=dict( sched='rt' ) ),
           'cfs': specialClass( CPULimitedHost, defaults=dict( sched='cfs' ) ) }
 
@@ -337,9 +337,11 @@ class MininetRunner( object ):
 
         link = customClass( LINKS, args.link )
         
-        if args.host == 'docker':
+        if args.host == 'isula':
             Net = Containernet
-            mn = Net( topo=topo, dimage='ubuntu:trusty',
+            mn = Net( topo=topo, config={'image':'ubuntu:trusty',
+                    'cmd':['/bin/bash',]
+                    },
                     switch=switch, host=host, controller=controller, link=link,
                     ipBase=args.ipbase, inNamespace=args.innamespace,
                     xterms=args.xterms, autoSetMacs=args.mac,
@@ -411,5 +413,6 @@ if __name__ == "__main__":
         # 打印堆栈跟踪以调试日志
         import traceback
         stackTrace = traceback.format_exc()
+        print(stackTrace)
         debug( stackTrace + "\n" )
         cleanup()

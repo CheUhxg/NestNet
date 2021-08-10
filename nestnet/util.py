@@ -241,6 +241,7 @@ def makeIntfPair( intf1, intf2, addr1=None, addr2=None, node1=None, node2=None,
                               'address %s ' %
                               (  intf1, addr1, intf2, addr2 ),
                               shell=True )
+       
     if cmdOutput:
         raise Exception( "Error creating interface pair (%s,%s): %s " %
                          ( intf1, intf2, cmdOutput ) )

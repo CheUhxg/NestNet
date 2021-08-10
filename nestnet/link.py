@@ -459,21 +459,20 @@ class Link( object ):
         # Update with remaining parameter list
         params1.update( params )
         params2.update( params )
-
+        
         self.fast = fast
         if fast:
             params1.setdefault( 'moveIntfFn', self._ignore )
-            params2.setdefault( 'moveIntfFn', self._ignore )
+            params2.setdefault( 'moveIntfFn', self._ignore )         
             self.makeIntfPair( intfName1, intfName2, addr1, addr2,
                                node1, node2, deleteIntfs=False )
-        else:
+        else:           
             self.makeIntfPair( intfName1, intfName2, addr1, addr2 )
-
+        
         if not cls1:
             cls1 = intf
         if not cls2:
             cls2 = intf
-
         intf1 = cls1( name=intfName1, node=node1,
                       link=self, mac=addr1, **params1  )
         intf2 = cls2( name=intfName2, node=node2,
