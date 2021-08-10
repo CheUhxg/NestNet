@@ -1110,10 +1110,10 @@ class Containernet( Mininet ):
                 else:
                     self.addController( 'c%d' % i, cls )
 
-        info( '*** Adding Docker containers:\n' )
+        info( '*** Adding iSula containers:\n' )
         for hostName in topo.hosts():
             self.addDocker( hostName, config=config, **topo.nodeInfo( hostName ) )
-            info( hostName + ' ' )
+            # info( hostName + ' ' )
 
         info( '\n*** Adding switches:\n' )
         for switchName in topo.switches():

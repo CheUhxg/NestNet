@@ -12,7 +12,6 @@ set -o nounset
 # Get directory containing mininet folder
 MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd -P )"
 
-# Set up build directory, which by default is the working directory
 #  unless the working directory is a subdirectory of mininet,
 #  in which case we use the directory containing mininet
 BUILD_DIR="$(pwd -P)"
@@ -48,15 +47,17 @@ if [ "$DIST" = "Ubuntu" ] || [ "$DIST" = "Debian" ]; then
 fi
 test -e /etc/fedora-release && DIST="Fedora"
 test -e /etc/redhat-release && DIST="RedHatEnterpriseServer"
-if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+test -e /etc/openEuler-release && DIST="OpenEuler"
+if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "OpenEuler" ]; then
     install='sudo yum -y install'
     remove='sudo yum -y erase'
+    pipinstall='sudo pip install'
     pkginst='sudo rpm -ivh'
-    update='sudo yum'
+    update='sudo yum -y'
     # Prereqs for this script
-    if ! which lsb_release &> /dev/null; then
-        $install redhat-lsb-core
-    fi
+    #if ! which lsb_release &> /dev/null; then
+    #    $install redhat-lsb-core
+    #fi
 fi
 test -e /etc/SuSE-release && DIST="SUSE Linux"
 if [ "$DIST" = "SUSE Linux" ]; then
@@ -69,9 +70,9 @@ if [ "$DIST" = "SUSE Linux" ]; then
     fi
 fi
 if which lsb_release &> /dev/null; then
-    DIST=`lsb_release -is`
-    RELEASE=`lsb_release -rs`
-    CODENAME=`lsb_release -cs`
+    DIST=`OpenEuler`
+    RELEASE=`20.03`
+    CODENAME=`LTS`
 fi
 echo "Detected Linux distribution: $DIST $RELEASE $CODENAME $ARCH"
 
@@ -83,7 +84,7 @@ KERNEL_HEADERS=kernel-headers-${KERNEL_NAME}
 # Treat Raspbian as Debian
 [ "$DIST" = 'Raspbian' ] && DIST='Debian'
 
-DISTS='Ubuntu|Debian|Fedora|RedHatEnterpriseServer|SUSE LINUX'
+DISTS='Ubuntu|Debian|Fedora|RedHatEnterpriseServer|SUSE LINUX|OpenEuler'
 if ! echo $DIST | egrep "$DISTS" >/dev/null; then
     echo "Install.sh currently only supports $DISTS."
     exit 1
@@ -160,13 +161,15 @@ function kernel_clean {
 
 # Install Mininet deps
 function mn_deps {
-    echo "Installing Mininet dependencies"
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
-        $install gcc make socat psmisc xterm openssh-clients iperf \
-            iproute telnet python-setuptools libcgroup-tools \
+    echo "Installing Nestnet dependencies"
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "OpenEuler" ]; then
+        $install gcc make patch socat psmisc xterm openssh-clients iperf3 \
+            iproute telnet libcgroup-tools \
             ethtool help2man net-tools
-        $install ${PYPKG}-pyflakes pylint ${PYPKG}-pep8-naming  \
+        ###$install ${PYPKG}-pyflakes pylint ${PYPKG}-pep8-naming
+		$install ${PYPKG}-pyflakes pylint  \
             ${PYPKG}-pexpect
+		$pipinstall pep8
     elif [ "$DIST" = "SUSE LINUX"  ]; then
 		$install gcc make socat psmisc xterm openssh iperf \
 			iproute telnet ${PYPKG}-setuptools libcgroup-tools \
@@ -199,7 +202,8 @@ function mn_deps {
     fi
 
     echo "Installing Mininet core"
-    pushd $MININET_DIR/mininet
+    pip install docker==4.1.0
+    pushd $MININET_DIR/NestNet
     sudo PYTHON=${PYTHON} make install
     popd
 }
@@ -222,7 +226,7 @@ function of {
     echo "Installing OpenFlow reference implementation..."
     cd $BUILD_DIR
     $install autoconf automake libtool make gcc
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "OpenEuler" ]; then
         $install git pkgconfig glibc-devel
 	elif [ "$DIST" = "SUSE LINUX"  ]; then
        $install git pkgconfig glibc-devel
@@ -235,7 +239,7 @@ function of {
     cd $BUILD_DIR/openflow
 
     # Patch controller to handle more than 16 switches
-    patch -p1 < $MININET_DIR/mininet/util/openflow-patches/controller.patch
+    patch -p1 < $MININET_DIR/NestNet/util/openflow-patches/controller.patch
 
     # Resume the install:
     ./boot.sh
@@ -291,7 +295,7 @@ function of13 {
 function install_wireshark {
     if ! which wireshark; then
         echo "Installing Wireshark"
-        if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+        if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "OpenEuler" ]; then
             $install wireshark wireshark-gnome
 		elif [ "$DIST" = "SUSE LINUX"  ]; then
 			$install wireshark
@@ -303,7 +307,7 @@ function install_wireshark {
     # Copy coloring rules: OF is white-on-blue:
     echo "Optionally installing wireshark color filters"
     mkdir -p $HOME/.wireshark
-    cp -n $MININET_DIR/mininet/util/colorfilters $HOME/.wireshark
+    cp -n $MININET_DIR/NestNet/util/colorfilters $HOME/.wireshark
 
     echo "Checking Wireshark version"
     WSVER=`wireshark -v | egrep -o '[0-9\.]+' | head -1`
@@ -409,11 +413,11 @@ function ubuntuOvs {
 function ovs {
     echo "Installing Open vSwitch..."
 
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "OpenEuler" ]; then
         $install openvswitch
-        if ! $install openvswitch-controller; then
-            echo "openvswitch-controller not installed"
-        fi
+	if ! $install openvswitch-controller; then
+	    echo "openvswitch-controller not installed"
+	fi
         return
     fi
 
@@ -489,7 +493,7 @@ function ivs {
 
     # Install dependencies
     $install gcc make
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "OpenEuler" ]; then
         $install git pkgconfig libnl3-devel libcap-devel openssl-devel
     else
         $install git-core pkg-config libnl-3-dev libnl-route-3-dev \
@@ -557,9 +561,9 @@ function nox {
 
     # Apply patches
     git checkout -b tutorial-destiny
-    git am $MININET_DIR/mininet/util/nox-patches/*tutorial-port-nox-destiny*.patch
+    git am $MININET_DIR/NestNet/util/nox-patches/*tutorial-port-nox-destiny*.patch
     if [ "$DIST" = "Ubuntu" ] && version_ge $RELEASE 12.04; then
-        git am $MININET_DIR/mininet/util/nox-patches/*nox-ubuntu12-hacks.patch
+        git am $MININET_DIR/NestNet/util/nox-patches/*nox-ubuntu12-hacks.patch
     fi
 
     # Build
@@ -636,7 +640,7 @@ function oftest {
 function cbench {
     echo "Installing cbench..."
 
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "OpenEuler" ]; then
         $install net-snmp-devel libpcap-devel libconfig-devel
 	elif [ "$DIST" = "SUSE LINUX"  ]; then
 		$install net-snmp-devel libpcap-devel libconfig-devel
@@ -712,7 +716,7 @@ net.ipv6.conf.lo.disable_ipv6 = 1' | sudo tee -a /etc/sysctl.conf > /dev/null
     $install ntp
 
     # Install vconfig for VLAN example
-    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" ]; then
+    if [ "$DIST" = "Fedora" -o "$DIST" = "RedHatEnterpriseServer" -o "$DIST" = "OpenEuler" ]; then
         $install vconfig
     else
         $install vlan
@@ -751,6 +755,12 @@ function modprobe {
     set -o nounset
 }
 
+function pip_install {
+    sudo pip install python-iptables
+    sudo pip install docker==4.1.0
+    sudo pip install grpcio-tools
+}
+
 function all {
     if [ "$DIST" = "Fedora" ]; then
         printf "\nFedora 18+ support (still work in progress):\n"
@@ -762,12 +772,13 @@ function all {
         exit 3
     fi
     echo "Installing all packages except for -eix (doxypy, ivs, nox-classic)..."
-    kernel
+    # kernel
     mn_deps
+    pip_install
     # Skip mn_doc (doxypy/texlive/fonts/etc.) because it's huge
     # mn_doc
     of
-    install_wireshark
+    # install_wireshark
     ovs
     # We may add ivs once it's more mature
     # ivs

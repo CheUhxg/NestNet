@@ -4,7 +4,7 @@ import grpc, os
 # import api_pb2,api_pb2_grpc
 from nestnet.isula import api_pb2_grpc, api_pb2
 
-from mininet.log import info, error, warn, debug
+from nestnet.log import info, error, warn, debug
 
 
 # connect to isula rpc service:test ok

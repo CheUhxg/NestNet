@@ -877,14 +877,11 @@ class Isula(Host):
         self.lastPid = None
         self.readbuf = ''
         # Wait for prompt
-        print('dsaffds')
         while True:
             data = self.read(1024)
-            print(data)
             if data[-1] == chr(127):
                 break          
             self.pollOut.poll()  
-        print('dddd')
         self.cmd('unset HISTFILE; stty -echo; set +m')
 
     def _get_volume_mount_name(self, volume_str):
