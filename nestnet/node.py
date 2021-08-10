@@ -65,15 +65,16 @@ from time import sleep
 
 import nestnet.isula.isula as isula
 from nestnet.log import info, error, warn, debug
-from nestnet.util import ( quietRun, errRun, errFail, moveIntf, isShellBuiltin,
-                           numCores, retry, mountCgroups, BaseString, decode,
-                           encode, Python3, which)
+from nestnet.util import (quietRun, errRun, errFail, moveIntf, isShellBuiltin,
+                          numCores, retry, mountCgroups, BaseString, decode,
+                          encode, Python3, which)
 from nestnet.moduledeps import moduleDeps, pathCheck, TUN
 from nestnet.link import Link, Intf, TCIntf, OVSIntf
 from re import findall
 from distutils.version import StrictVersion
 
 
+# noinspection PySingleQuotedDocstring
 class Node(object):
     """A virtual network node is simply a shell in a network namespace.
        We communicate with it using pipes."""
@@ -85,7 +86,7 @@ class Node(object):
            inNamespace: in network namespace?
            privateDirs: list of private directory strings or tuples
            params: Node parameters (see config() for details)"""
-        
+
         # Make sure class actually works
         self.checkSetup()
 
@@ -107,7 +108,7 @@ class Node(object):
         self.ports = {}
 
         self.nameToIntf = {}  # dict of interface names to Intfs
-        
+
         # Make pylint happy
         (self.shell, self.execed, self.pid, self.stdin, self.stdout,
          self.lastPid, self.lastCmd, self.pollOut) = (
@@ -246,7 +247,7 @@ class Node(object):
            size: maximum number of characters to return"""
         count = len(self.readbuf)
         if count < size:
-            data = decode( os.read( self.stdout.fileno(), size - count ) )
+            data = decode(os.read(self.stdout.fileno(), size - count))
             self.readbuf += data
         if size >= len(self.readbuf):
             result = self.readbuf
@@ -678,6 +679,7 @@ class Node(object):
         pathCheck('mnexec', 'ifconfig', moduleName='Mininet')
 
 
+# noinspection PySingleQuotedDocstring
 class Host(Node):
     "A host is simply a Node"
     pass
@@ -709,7 +711,7 @@ class Isula(Host):
             'cpu_period': None,
             'cpu_shares': None,
             'cpuset_cpus': None,
-            'cpuset_mems':None,
+            'cpuset_mems': None,
             'mem_limit': None,
             'dns_servers': [],
             'dns_searches': [],
@@ -720,7 +722,7 @@ class Isula(Host):
             'mount': {},
             'hostname': None,
             'sysctls': {},
-            'cap_add': ['net_admin',],
+            'cap_add': ['net_admin', ],
             'cmd': ['/bin/sh', ],
             'tty': True,
             'image': 'ubuntu:trusty'
@@ -767,10 +769,10 @@ class Isula(Host):
 
         # create and run container
         self.dc = isula.runcontainer(name, defaults)
-        
+
         # fetch information about new container
         self.dcinfo = isula.get_status(self.dc.container_id)
-        
+
         self.did = self.dc.container_id
 
         Host.__init__(self, name, **kwargs)
@@ -806,7 +808,7 @@ class Isula(Host):
         Try to find the original CMD command of the Dockerfile
         by inspecting the iSula image.
         Returns list from CMD field if it is different from
-        a single /bin/bash command which Containernet executes
+        a single /bin/bash command which Nestnet executes
         anyhow.
         """
         try:
@@ -853,12 +855,12 @@ class Isula(Host):
         # bash -i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
         # prompt is set to sentinel chr( 127 )
-        cmd = ['isula', 'exec', '-it', '%s' % (self.did), 'env', 'PS1=' + chr(127),
+        cmd = ['isula', 'exec', '-it', '%s' % self.did, 'env', 'PS1=' + chr(127),
                'bash', '--norc', '-is', 'mininet:' + self.name]
         # Spawn a shell subprocess in a pseudo-tty, to disable buffering
         # in the subprocess and insulate it from signals (e.g. SIGINT)
         # received by the parent
-        
+
         self.master, self.slave = pty.openpty()
         self.shell = self._popen(cmd, stdin=self.slave, stdout=self.slave, stderr=self.slave,
                                  close_fds=False)
@@ -880,8 +882,8 @@ class Isula(Host):
         while True:
             data = self.read(1024)
             if data[-1] == chr(127):
-                break          
-            self.pollOut.poll()  
+                break
+            self.pollOut.poll()
         self.cmd('unset HISTFILE; stty -echo; set +m')
 
     def _get_volume_mount_name(self, volume_str):
@@ -930,9 +932,9 @@ class Isula(Host):
         return self.waitOutput(verbose)
 
     def _get_pid(self):
-        con_status=os.popen("sudo isula inspect %s"%self.did)
-        con_text=con_status.read()
-        pid=re.search("(?<=\"Pid\": ).*?(?=,)",con_text)
+        con_status = os.popen("sudo isula inspect %s" % self.did)
+        con_text = con_status.read()
+        pid = re.search("(?<=\"Pid\": ).*?(?=,)", con_text)
         return pid.group()
         # print(self.dcinfo)
         # state = self.dcinfo.get("State", None)
@@ -1065,6 +1067,7 @@ class Isula(Host):
             return -1
 
 
+# noinspection PySingleQuotedDocstring
 class CPULimitedHost(Host):
     "CPU limited host"
 
@@ -1275,6 +1278,7 @@ class CPULimitedHost(Host):
 # meaningless. It is important to understand this if you
 # want to create a functional router using OpenFlow.
 
+# noinspection PySingleQuotedDocstring
 class Switch(Node):
     """A Switch is a Node that is running (or has execed?)
        an OpenFlow switch."""
@@ -1450,6 +1454,7 @@ class UserSwitch(Switch):
         super(UserSwitch, self).stop(deleteIntfs)
 
 
+# noinspection PySingleQuotedDocstring
 class OVSSwitch(Switch):
     "Open vSwitch switch. Depends on ovs-vsctl."
 
@@ -1706,6 +1711,7 @@ class OVSBridge(OVSSwitch):
             return True
 
 
+# noinspection PySingleQuotedDocstring
 class IVSSwitch(Switch):
     "Indigo Virtual Switch"
 
@@ -1776,6 +1782,7 @@ class IVSSwitch(Switch):
                         ' tcp:127.0.0.1:%i' % self.listenPort)
 
 
+# noinspection PySingleQuotedDocstring
 class Controller(Node):
     """A Controller is a Node that is running (or has execed?) an
        OpenFlow controller."""
@@ -1855,6 +1862,7 @@ class Controller(Node):
         return which('controller')
 
 
+# noinspection PySingleQuotedDocstring
 class OVSController(Controller):
     "Open vSwitch controller"
 
@@ -1870,6 +1878,7 @@ class OVSController(Controller):
                 which('ovs-testcontroller'))
 
 
+# noinspection PySingleQuotedDocstring
 class NOX(Controller):
     "Controller to run a NOX application."
 
@@ -1914,6 +1923,7 @@ class Ryu(Controller):
                             cargs=cargs, **kwargs)
 
 
+# noinspection PySingleQuotedDocstring
 class RemoteController(Controller):
     "Controller running outside of Mininet's control."
 
@@ -1966,6 +1976,7 @@ class RemoteController(Controller):
 DefaultControllers = (Controller, OVSController)
 
 
+# noinspection PySingleQuotedDocstring
 def findController(controllers=DefaultControllers):
     "Return first available controller from list, if any"
     for controller in controllers:

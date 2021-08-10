@@ -39,7 +39,7 @@
    - name: install python-iptables
      pip: name=python-iptables state=latest executable={{pip_path.stdout}}
 
-   - name: build and install Containernet (using Mininet installer)
+   - name: build and install Nestnet (using Mininet installer)
      shell: containernet/util/install.sh
      args:
        chdir: ../../
@@ -49,7 +49,7 @@
      args:
        chdir: ../
 
-   - name: download 'ubuntu' docker image for Containernet example
+   - name: download 'ubuntu' isula image for Nestnet example
      shell: isula pull ubuntu:trusty
      tags:
         - notindocker

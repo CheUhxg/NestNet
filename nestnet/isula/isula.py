@@ -25,7 +25,7 @@ def version():
 
 
 def name_to_id(name):
-    stub=connect()[0]
+    stub = connect()[0]
 
     list_con_resp = stub.ListContainers(api_pb2.ListContainersRequest())
     for container in list_con_resp.containers:
@@ -66,7 +66,7 @@ def pull_image(image_name):
 
     for image in listimage_rep.images:
         if image_name in str(image.repo_tags):
-            exist=True
+            exist = True
             break
 
     if not exist:
@@ -104,15 +104,15 @@ def runcontainer(name, config):
     pull_image(config['image'])
 
     # create pod
-    pod_name=name+'sandbox'
+    pod_name = name + 'sandbox'
 
     LinuxPodSecContext = api_pb2.LinuxSandboxSecurityContext(
         privileged=config['pod_privileged']
     )
 
     linuxPodCof = api_pb2.LinuxPodSandboxConfig(
-        security_context = LinuxPodSecContext,
-        sysctls = config['sysctls']
+        security_context=LinuxPodSecContext,
+        sysctls=config['sysctls']
     )
 
     sandboxConfig = api_pb2.PodSandboxConfig(
@@ -169,7 +169,7 @@ def runcontainer(name, config):
     return container_resp
 
 
-def update_resourse(name,Resource):
+def update_resourse(name, Resource):
     stub = connect()[0]
 
     container_id = name_to_id(name)
@@ -196,52 +196,27 @@ def update_resourse(name,Resource):
         cpuset_mems=default_res['cpuset_mems']
     )
 
-    stub.UpdateContainerResources(api_pb2.UpdateContainerResourcesRequest(container_id=container_id, linux=ContainerResources))
+    stub.UpdateContainerResources(
+        api_pb2.UpdateContainerResourcesRequest(container_id=container_id, linux=ContainerResources))
 
 
 def get_status(container_id):
     stub = connect()[0]
-    container_status = stub.ListContainers(api_pb2.ListContainersRequest(filter=api_pb2.ContainerFilter(id=container_id)))
+    container_status = stub.ListContainers(
+        api_pb2.ListContainersRequest(filter=api_pb2.ContainerFilter(id=container_id)))
 
-    con_info= {'id': container_status.containers[0].id,
-               'pod_sandbox_id': container_status.containers[0].pod_sandbox_id,
-               'name': container_status.containers[0].metadata.name,
-               'image': container_status.containers[0].image.image,
-               'image_info': container_status.containers[0].image_ref,
-               'created_at':container_status.containers[0].created_at}
+    con_info = {'id': container_status.containers[0].id,
+                'pod_sandbox_id': container_status.containers[0].pod_sandbox_id,
+                'name': container_status.containers[0].metadata.name,
+                'image': container_status.containers[0].image.image,
+                'image_info': container_status.containers[0].image_ref,
+                'created_at': container_status.containers[0].created_at}
     con_info.update(container_status.containers[0].annotations)
 
     return con_info
 
 
 def inspect_image(imagename):
-    stub=connect()[1]
-    image=api_pb2.ImageSpec(image=imagename)
+    stub = connect()[1]
+    image = api_pb2.ImageSpec(image=imagename)
     imageinfo = stub.ImageStatus(api_pb2.ImageStatusRequest(image=image))
-
-
-# if __name__=='__main__':
-#     defaults = {
-#             'privileged': False,
-#             'pod_privileged': True,
-#             'volumes': [],
-#             'cpu_quota': -1,
-#             'cpu_period': None,
-#             'cpu_shares': None,
-#             'cpuset_cpus': None,
-#             'mem_limit': None,
-#             'dns_servers': [],
-#             'dns_searches': [],
-#             'dns_options': [],
-#             # 'device_con_path': '/',
-#             # 'device_host_path': '/',
-#             # 'device_permissions': 'r',
-#             'mount': {},
-#             'hostname': None,
-#             'sysctls': {},
-#             'cap_add': ['net_admin', ],
-#             'cmd': ['/bin/sh', ],
-#             'tty': True,
-#             'image': 'alpine'
-#         }
-#     runcontainer('tt',defaults)
