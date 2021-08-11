@@ -59,7 +59,7 @@ class Cleanup(object):
              "pings/noxes\n")
         zombies = ('controller ofprotocol ofdatapath ping nox_core'
                    'lt-nox_core ovs-openflowd ovs-controller'
-                   'ovs-testcontroller udpbwtest mnexec ivs ryu-manager')
+                   'ovs-testcontroller udpbwtest nnexec ivs ryu-manager')
         # Note: real zombie processes can't actually be killed, since they
         # are already (un)dead. Then again,
         # you can't connect to them either, so they're mostly harmless.
@@ -68,8 +68,8 @@ class Cleanup(object):
         time.sleep(1)
         sh('killall -9 ' + zombies + ' 2> /dev/null')
 
-        # And kill off sudo mnexec
-        sh('pkill -9 -f "sudo mnexec"')
+        # And kill off sudo nnexec
+        sh('pkill -9 -f "sudo nnexec"')
 
         info("*** Removing junk from /tmp\n")
         sh('rm -f /tmp/vconn* /tmp/vlogs* /tmp/*.out /tmp/*.log')

@@ -144,7 +144,7 @@ class Node(object):
         if self.shell:
             error("%s: shell is already running\n" % self.name)
             return
-        # mnexec: (c)lose descriptors, (d)etach from tty,
+        # nnexec: (c)lose descriptors, (d)etach from tty,
         # (p)rint pid, and run in (n)amespace
         opts = '-cd' if mnopts is None else mnopts
         if self.inNamespace:
@@ -152,7 +152,7 @@ class Node(object):
         # bash -i: force interactive
         # -s: pass $* to shell, and make process easy to find in ps
         # prompt is set to sentinel chr( 127 )
-        cmd = ['mnexec', opts, 'env', 'PS1=' + chr(127),
+        cmd = ['nnexec', opts, 'env', 'PS1=' + chr(127),
                'bash', '--norc', '--noediting',
                '-is', 'mininet:' + self.name]
 
@@ -321,7 +321,7 @@ class Node(object):
             # print ^A{pid}\n so monitor() can set lastPid
             cmd += ' printf "\\001%d\\012" $! '
         elif printPid and not isShellBuiltin(cmd):
-            cmd = 'mnexec -p ' + cmd
+            cmd = 'nnexec -p ' + cmd
         self.write(cmd + '\n')
         self.lastPid = None
         self.waiting = True
@@ -335,7 +335,7 @@ class Node(object):
         """Monitor and return the output of a command.
            Set self.waiting to False if command has completed.
            timeoutms: timeout in ms or None to wait indefinitely
-           findPid: look for PID from mnexec -p"""
+           findPid: look for PID from nnexec -p"""
         ready = self.waitReadable(timeoutms)
         if not ready:
             return ''
@@ -401,7 +401,7 @@ class Node(object):
            kwargs: Popen() keyword args"""
         defaults = {'stdout': PIPE, 'stderr': PIPE,
                     'mncmd':
-                        ['mnexec', '-da', str(self.pid)]}
+                        ['nnexec', '-da', str(self.pid)]}
         defaults.update(kwargs)
         shell = defaults.pop('shell', False)
         if len(args) == 1:
@@ -418,7 +418,7 @@ class Node(object):
             cmd = list(args)
         if shell:
             cmd = [os.environ['SHELL'], '-c'] + [' '.join(cmd)]
-        # Attach to our namespace  using mnexec -a
+        # Attach to our namespace  using nnexec -a
         cmd = defaults.pop('mncmd') + cmd
         popen = self._popen(cmd, **defaults)
         return popen
@@ -676,7 +676,7 @@ class Node(object):
     @classmethod
     def setup(cls):
         "Make sure our class dependencies are available"
-        pathCheck('mnexec', 'ifconfig', moduleName='Mininet')
+        pathCheck('nnexec', 'ifconfig', moduleName='Mininet')
 
 
 # noinspection PySingleQuotedDocstring
@@ -847,7 +847,7 @@ class Isula(Host):
         if self.shell:
             error("%s: shell is already running\n" % self.name)
             return
-        # mnexec: (c)lose descriptors, (d)etach from tty,
+        # nnexec: (c)lose descriptors, (d)etach from tty,
         # (p)rint pid, and run in (n)amespace
         # opts = '-cd' if mnopts is None else mnopts
         # if self.inNamespace:
@@ -1121,8 +1121,8 @@ class CPULimitedHost(Host):
         """Return a Popen() object in node's namespace
            args: Popen() args, single list, or string
            kwargs: Popen() keyword args"""
-        # Tell mnexec to execute command in our cgroup
-        mncmd = kwargs.pop('mncmd', ['mnexec', '-g', self.name,
+        # Tell nnexec to execute command in our cgroup
+        mncmd = kwargs.pop('mncmd', ['nnexec', '-g', self.name,
                                      '-da', str(self.pid)])
         # if our cgroup is not given any cpu time,
         # we cannot assign the RR Scheduler.

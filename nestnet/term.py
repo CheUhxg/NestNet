@@ -33,7 +33,7 @@ def tunnelX11(node, display=None):
         port = 6000 + int(float(screen))
         connection = r'TCP\:%s\:%s' % (host, port)
         cmd = ["socat", "TCP-LISTEN:%d,fork,reuseaddr" % port,
-               "EXEC:'mnexec -a 1 socat STDIO %s'" % connection]
+               "EXEC:'nnexec -a 1 socat STDIO %s'" % connection]
     return 'localhost:' + screen, node.popen(cmd)
 
 
@@ -90,7 +90,7 @@ def runX11(node, cmd):
 
 def cleanUpScreens():
     "Remove moldy socat X11 tunnels."
-    errRun("pkill -9 -f mnexec.*socat")
+    errRun("pkill -9 -f nnexec.*socat")
 
 
 def makeTerms(nodes, title='Node', term='xterm'):
