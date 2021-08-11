@@ -338,6 +338,8 @@ class MininetRunner( object ):
         if args.host == 'isula':
             if args.config:
                 config = configContainer( args.config )
+            else:
+                config = args.config
             Net = Nestnet
             nn = Net( topo=topo, config=config,
                     switch=switch, host=host, controller=controller, link=link,
