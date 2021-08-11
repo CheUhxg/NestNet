@@ -11,6 +11,16 @@ sudo bash util/install.sh -a
 
 > 若中途停止重新运行**第三步**，需清空`NestNet`同级目录下的依赖文件夹。
 
+## Isula 配置
+>官方提供镜像失效，替换Pod-sandbox-image,须手动更改isula配置
+
+```bash
+vim /etc/isulad/daemon.json
+# 修改"pod-sandbox-image"
+"pod-sandbox-image":"kylefoxaustin/ubuntu-amd64-vnc-lxde-complete:latest"
+systemctl restart isulad
+```
+
 ## 运行
 
 > 在`NestNet`目录下运行
