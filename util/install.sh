@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Mininet install script for Ubuntu and Debian
+# Nestnet install script for Ubuntu and Debian
 # Original author: Brandon Heller
 
 # Fail on error
@@ -9,11 +9,11 @@ set -e
 # Fail on unset var usage
 set -o nounset
 
-# Get directory containing mininet folder
+# Get directory containing Nestnet folder
 MININET_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd -P )"
 
-#  unless the working directory is a subdirectory of mininet,
-#  in which case we use the directory containing mininet
+#  unless the working directory is a subdirectory of Nestnet,
+#  in which case we use the directory containing Nestnet
 BUILD_DIR="$(pwd -P)"
 case $BUILD_DIR in
   $MININET_DIR/*) BUILD_DIR=$MININET_DIR;; # currect directory is a subdirectory
@@ -201,7 +201,7 @@ function mn_deps {
         $install cgroup-tools || $install cgroup-bin
     fi
 
-    echo "Installing Mininet core"
+    echo "Installing Nestnet core"
     pip install docker==4.1.0
     pushd $MININET_DIR/NestNet
     sudo PYTHON=${PYTHON} make install
@@ -210,7 +210,7 @@ function mn_deps {
 
 # Install Mininet documentation dependencies
 function mn_doc {
-    echo "Installing Mininet documentation dependencies"
+    echo "Installing Nestnet documentation dependencies"
     $install doxygen texlive-fonts-recommended
     if ! $install doxygen-latex; then
         echo "doxygen-latex not needed"
@@ -397,7 +397,7 @@ function ubuntuOvs {
     /sbin/modinfo openvswitch
     sudo ovs-vsctl show
     # Switch can run on its own, but
-    # Mininet should control the controller
+    # Nestnet should control the controller
     # This appears to only be an issue on Ubuntu/Debian
     if sudo service openvswitch-controller stop 2>/dev/null; then
         echo "Stopped running controller"
@@ -448,7 +448,7 @@ function ovs {
     fi
     if [ "$OVSC" ]; then
         # Switch can run on its own, but
-        # Mininet should control the controller
+        # Nestnet should control the controller
         # This appears to only be an issue on Ubuntu/Debian
         if sudo service $OVSC stop 2>/dev/null; then
             echo "Stopped running controller"
@@ -661,7 +661,7 @@ function cbench {
 }
 
 function vm_other {
-    echo "Doing other Mininet VM setup tasks..."
+    echo "Doing other Nestnet VM setup tasks..."
 
     # Remove avahi-daemon, which may cause unwanted discovery packets to be
     # sent during tests, near link status changes:
@@ -681,7 +681,7 @@ function vm_other {
     if ! grep 'disable_ipv6' /etc/sysctl.conf; then
         echo 'Disabling IPv6'
         echo '
-# Mininet: disable IPv6
+# Nestnet: disable IPv6
 net.ipv6.conf.all.disable_ipv6 = 1
 net.ipv6.conf.default.disable_ipv6 = 1
 net.ipv6.conf.lo.disable_ipv6 = 1' | sudo tee -a /etc/sysctl.conf > /dev/null
@@ -787,7 +787,7 @@ function all {
     pox
     oftest
     cbench
-    echo "Enjoy Mininet!"
+    echo "Enjoy Nestnet!"
 }
 
 # Restore disk space and remove sensitive files before shipping a VM.
@@ -811,10 +811,10 @@ function vm_clean {
         echo '#!/bin/bash' | sudo tee /etc/rc.local
         sudo chmod +x /etc/rc.local
     fi
-    if ! grep mininet /etc/rc.local >& /dev/null; then
+    if ! grep nestnet /etc/rc.local >& /dev/null; then
         sudo sed -i -e "s/exit 0//" /etc/rc.local || true
         echo '
-# mininet: regenerate ssh keys if we deleted them
+# nestnet: regenerate ssh keys if we deleted them
 if ! stat -t /etc/ssh/*key* >/dev/null 2>&1; then
     /usr/sbin/dpkg-reconfigure openssh-server
 fi
@@ -845,7 +845,7 @@ function usage {
     printf '\nUsage: %s [-abcdfhikmnprtvVwxy03]\n\n' $(basename $0) >&2
 
     printf 'This install script attempts to install useful packages\n' >&2
-    printf 'for Mininet. It should (hopefully) work on Ubuntu 11.10+\n' >&2
+    printf 'for Nestnet. It should (hopefully) work on Ubuntu 11.10+\n' >&2
     printf 'If you run into trouble, try\n' >&2
     printf 'installing one thing at a time, and looking at the \n' >&2
     printf 'specific installation function in this script.\n\n' >&2
@@ -855,7 +855,7 @@ function usage {
     printf -- ' -b: install controller (B)enchmark (oflops)\n' >&2
     printf -- ' -c: (C)lean up after kernel install\n' >&2
     printf -- ' -d: (D)elete some sensitive files from a VM image\n' >&2
-    printf -- ' -e: install Mininet documentation/LaT(e)X dependencies\n' >&2
+    printf -- ' -e: install Nestnet documentation/LaT(e)X dependencies\n' >&2
     printf -- ' -f: install Open(F)low\n' >&2
     printf -- ' -h: print this (H)elp message\n' >&2
     printf -- ' -i: install (I)ndigo Virtual Switch\n' >&2
@@ -865,7 +865,7 @@ function usage {
     printf -- ' -p: install (P)OX OpenFlow Controller\n' >&2
     printf -- ' -r: remove existing Open vSwitch packages\n' >&2
     printf -- ' -s <dir>: place dependency (S)ource/build trees in <dir>\n' >&2
-    printf -- ' -t: complete o(T)her Mininet VM setup tasks\n' >&2
+    printf -- ' -t: complete o(T)her Nestnet VM setup tasks\n' >&2
     printf -- ' -v: install Open (V)switch\n' >&2
     printf -- ' -V <version>: install a particular version of Open (V)switch on Ubuntu\n' >&2
     printf -- ' -w: install OpenFlow (W)ireshark dissector\n' >&2

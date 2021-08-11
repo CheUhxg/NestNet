@@ -1,4 +1,4 @@
-/* mnexec: execution utility for mininet
+/* nnexec: execution utility for mininet
  *
  * Starts up programs and does things that are slow or
  * difficult in Python, including:

@@ -1,13 +1,13 @@
-MININET = mininet/*.py
-TEST = mininet/test/*.py
-EXAMPLES = mininet/examples/*.py
-MN = bin/mn
+NESTNET = nestnet/*.py
+TEST = nestnet/test/*.py
+EXAMPLES = nestnet/examples/*.py
+MN = bin/nn
 PYTHON ?= python
-PYMN = $(PYTHON) -B bin/mn
+PYMN = $(PYTHON) -B bin/nn
 BIN = $(MN)
-PYSRC = $(MININET) $(TEST) $(EXAMPLES) $(BIN)
-MNEXEC = mnexec
-MANPAGES = mn.1 mnexec.1
+PYSRC = $(NESTNET) $(TEST) $(EXAMPLES) $(BIN)
+MNEXEC = nnexec
+MANPAGES = nn.1 nnexec.1
 P8IGN = E251,E201,E302,E202,E126,E127,E203,E226,E402,W504,W503,E731
 PREFIX ?= /usr
 BINDIR ?= $(PREFIX)/bin
@@ -36,45 +36,45 @@ errcheck: $(PYSRC)
 	pyflakes $(PYSRC)
 	pylint -E --rcfile=.pylint $(PYSRC)
 
-test: $(MININET) $(TEST)
+test: $(NESTNET) $(TEST)
 	-echo "Running tests"
-	mininet/test/test_nets.py
-	mininet/test/test_hifi.py
+	nestnet/test/test_nets.py
+	nestnet/test/test_hifi.py
 
-slowtest: $(MININET)
+slowtest: $(NESTNET)
 	-echo "Running slower tests (walkthrough, examples)"
-	mininet/test/test_walkthrough.py -v
-	mininet/examples/test/runner.py -v
+	nestnet/test/test_walkthrough.py -v
+	nestnet/examples/test/runner.py -v
 
-mnexec: mnexec.c $(MN) mininet/net.py
+nnexec: nnexec.c $(MN) nestnet/net.py
 	$(CC) $(CFLAGS) $(LDFLAGS) \
 	-DVERSION=\"`PYTHONPATH=. $(PYMN) --version 2>&1`\" $< -o $@
 
-install-mnexec: $(MNEXEC)
+install-nnexec: $(MNEXEC)
 	install -D $(MNEXEC) $(BINDIR)/$(MNEXEC)
 
 install-manpages: $(MANPAGES)
 	install -D -t $(MANDIR) $(MANPAGES)
 
-install: install-mnexec install-manpages
+install: install-nnexec install-manpages
 #	This seems to work on all pip versions
-	$(PYTHON) -m pip uninstall -y mininet || true
+	$(PYTHON) -m pip uninstall -y nestnet || true
 	$(PYTHON) -m pip install .
 
 develop: $(MNEXEC) $(MANPAGES)
 # 	Perhaps we should link these as well
 	install $(MNEXEC) $(BINDIR)
 	install $(MANPAGES) $(MANDIR)
-	$(PYTHON) -m pip uninstall -y mininet || true
+	$(PYTHON) -m pip uninstall -y nestnet || true
 	$(PYTHON) -m pip install -e . --no-binary :all:
 
 man: $(MANPAGES)
 
-mn.1: $(MN)
+nn.1: $(MN)
 	PYTHONPATH=. help2man -N -n "create a Mininet network." \
 	--no-discard-stderr "$(PYMN)" -o $@
 
-mnexec.1: mnexec
+nnexec.1: nnexec
 	help2man -N -n "execution utility for Mininet." \
 	-h "-h" -v "-v" --no-discard-stderr ./$< -o $@
 

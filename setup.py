@@ -8,11 +8,11 @@ from os.path import join
 # Get version number from source tree
 import sys
 sys.path.append( '.' )
-from mininet.net import VERSION
+from nestnet.net import VERSION
 
-scripts = [ join( 'bin', filename ) for filename in [ 'mn' ] ]
+scripts = [ join( 'bin', filename ) for filename in [ 'nn' ] ]
 
-modname = distname = 'mininet'
+modname = distname = 'nestnet'
 
 setup(
     name=distname,
@@ -20,12 +20,12 @@ setup(
     description='Process-based OpenFlow emulator',
     author='Bob Lantz',
     author_email='rlantz@cs.stanford.edu',
-    packages=[ 'mininet', 'mininet.examples' ],
+    packages=[ 'nestnet', 'nestnet.examples' ],
     long_description="""
         Mininet is a network emulator which uses lightweight
         virtualization to create virtual networks for rapid
         prototyping of Software-Defined Network (SDN) designs
-        using OpenFlow. http://mininet.org
+        using OpenFlow. http://nestnet.org
         """,
     classifiers=[
           "License :: OSI Approved :: BSD License",
