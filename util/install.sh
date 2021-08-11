@@ -208,7 +208,7 @@ function mn_deps {
     popd
 }
 
-# Install Mininet documentation dependencies
+# Install Nestnet documentation dependencies
 function mn_doc {
     echo "Installing Nestnet documentation dependencies"
     $install doxygen texlive-fonts-recommended
@@ -811,7 +811,7 @@ function vm_clean {
         echo '#!/bin/bash' | sudo tee /etc/rc.local
         sudo chmod +x /etc/rc.local
     fi
-    if ! grep nestnet /etc/rc.local >& /dev/null; then
+    if ! grep mininet /etc/rc.local >& /dev/null; then
         sudo sed -i -e "s/exit 0//" /etc/rc.local || true
         echo '
 # nestnet: regenerate ssh keys if we deleted them
