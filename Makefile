@@ -1,13 +1,13 @@
 MININET = nestnet/*.py
 TEST = nestnet/test/*.py
 EXAMPLES = nestnet/examples/*.py
-MN = bin/mn
+MN = bin/nn
 PYTHON ?= python3
-PYMN = $(PYTHON) -B bin/mn
+PYMN = $(PYTHON) -B bin/nn
 BIN = $(MN)
 PYSRC = $(MININET) $(TEST) $(EXAMPLES) $(BIN)
-MNEXEC = mnexec
-MANPAGES = mn.1 mnexec.1
+MNEXEC = nnexec
+MANPAGES = nn.1 nnexec.1
 P8IGN = E251,E201,E302,E202,E126,E127,E203,E226
 PREFIX ?= /usr
 BINDIR ?= $(PREFIX)/bin
@@ -26,16 +26,16 @@ test: $(MININET) $(TEST)
 	-echo "Running tests"
 	py.test -v nestnet/test/test_containernet.py
 
-mnexec: mnexec.c $(MN) nestnet/net.py
+nnexec: nnexec.c $(MN) nestnet/net.py
 	cc $(CFLAGS) $(LDFLAGS) -DVERSION=\"`PYTHONPATH=. $(PYMN) --version`\" $< -o $@
 
-install-mnexec: $(MNEXEC)
+install-nnexec: $(MNEXEC)
 	install -D $(MNEXEC) $(BINDIR)/$(MNEXEC)
 
 install-manpages: $(MANPAGES)
 	install -D -t $(MANDIR) $(MANPAGES)
 
-install: install-mnexec install-manpages
+install: install-nnexec install-manpages
 	$(PYTHON) setup.py install
 
 develop: $(MNEXEC) $(MANPAGES)
@@ -46,11 +46,11 @@ develop: $(MNEXEC) $(MANPAGES)
 
 man: $(MANPAGES)
 
-mn.1: $(MN)
+nn.1: $(MN)
 	PYTHONPATH=. help2man -N -n "create a Mininet network." \
 	--no-discard-stderr "$(PYMN)" -o $@
 
-mnexec.1: mnexec
+nnexec.1: nnexec
 	help2man -N -n "execution utility for Mininet." \
 	-h "-h" -v "-v" --no-discard-stderr ./$< -o $@
 

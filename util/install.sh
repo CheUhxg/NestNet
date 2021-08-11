@@ -202,8 +202,9 @@ function mn_deps {
     fi
 
     echo "Installing Nestnet core"
-    pip install docker==4.1.0
+    pip_install
     pushd $MININET_DIR/NestNet
+    gcc mnexec.c -o mnexec
     sudo PYTHON=${PYTHON} make install
     popd
 }
