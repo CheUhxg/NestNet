@@ -336,7 +336,8 @@ class MininetRunner( object ):
         link = customClass( LINKS, args.link )
         
         if args.host == 'isula':
-            config = configContainer( args.config )
+            if args.config:
+                config = configContainer( args.config )
             Net = Nestnet
             nn = Net( topo=topo, config=config,
                     switch=switch, host=host, controller=controller, link=link,

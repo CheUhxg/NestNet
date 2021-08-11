@@ -18,28 +18,28 @@ from sys import exit
 if 'PYTHONPATH' in os.environ:
     sys.path = os.environ[ 'PYTHONPATH' ].split( ':' ) + sys.path
 
-from nestnet.clean import cleanup
-import nestnet.cli
-from nestnet.log import lg, LEVELS, info, debug, warn, error, output
-from nestnet.net import Nestnet, Mininet, MininetWithControlNet, VERSION
-from nestnet.node import ( Host, Isula, CPULimitedHost, Controller, OVSController,
+from NestNet.nestnet.clean import cleanup
+import NestNet.nestnet.cli
+from NestNet.nestnet.log import lg, LEVELS, info, debug, warn, error, output
+from NestNet.nestnet.net import Nestnet, Mininet, MininetWithControlNet, VERSION
+from NestNet.nestnet.node import ( Host, Isula, CPULimitedHost, Controller, OVSController,
                            Ryu, NOX, RemoteController, findController,
                            DefaultController, NullController,
                            UserSwitch, OVSSwitch, OVSBridge,
                            IVSSwitch )
-from nestnet.nodelib import LinuxBridge
-from nestnet.link import Link, TCLink, TCULink, OVSLink
-from nestnet.topo import ( SingleSwitchTopo, LinearTopo,
+from NestNet.nestnet.nodelib import LinuxBridge
+from NestNet.nestnet.link import Link, TCLink, TCULink, OVSLink
+from NestNet.nestnet.topo import ( SingleSwitchTopo, LinearTopo,
                            SingleSwitchReversedTopo, MinimalTopo )
-from nestnet.topolib import TreeTopo, TorusTopo
-from nestnet.util import customClass, specialClass, splitArgs, buildTopo, configContainer
+from NestNet.nestnet.topolib import TreeTopo, TorusTopo
+from NestNet.nestnet.util import customClass, specialClass, splitArgs, buildTopo, configContainer
 
 # 用于实验的集群原型
-from nestnet.examples.cluster import ( MininetCluster, RemoteHost,
+from NestNet.nestnet.examples.cluster import ( MininetCluster, RemoteHost,
                                        RemoteOVSSwitch, RemoteLink,
                                        SwitchBinPlacer, RandomPlacer,
                                        ClusterCleanup )
-from nestnet.examples.clustercli import ClusterCLI
+from NestNet.nestnet.examples.clustercli import ClusterCLI
 
 
 PLACEMENT = { 'block': SwitchBinPlacer, 'random': RandomPlacer }
@@ -151,7 +151,7 @@ def version( *_args ):
 
 
 class MininetRunner( object ):
-    "构建，设置和运行nestnet."
+    "构建，设置和运行NestNet.nestnet."
 
     def __init__( self ):
         "Init."
@@ -289,7 +289,7 @@ class MininetRunner( object ):
         lg.setLogLevel( self.args.verbosity )
 
     def begin( self ):
-        "创建和运行nestnet."
+        "创建和运行NestNet.nestnet."
 
         global CLI
 
@@ -362,7 +362,7 @@ class MininetRunner( object ):
                 host, switch, link = RemoteHost, RemoteOVSSwitch, RemoteLink
                 Net = partial( MininetCluster, servers=servers,
                             placement=PLACEMENT[ args.placement ] )
-                nestnet.cli.CLI = ClusterCLI
+                NestNet.nestnet.cli.CLI = ClusterCLI
             
             nn = Net( topo=topo,
                     switch=switch, host=host, controller=controller, link=link,
@@ -372,7 +372,7 @@ class MininetRunner( object ):
                     waitConnected=args.wait,
                     listenPort=args.listenport )
 
-        CLI = nestnet.cli.CLI if CLI is None else CLI
+        CLI = NestNet.nestnet.cli.CLI if CLI is None else CLI
 
         if args.pre:
             CLI( nn, script=args.pre )
