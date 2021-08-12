@@ -3,15 +3,27 @@
 ## 安装
 > 操作系统要求：**openEuler 21.03**和**Python3**
 
+### nestnet
+
 ```bash
 git clone -b master https://github.com/Constantine3/NestNet.git
 cd NestNet
 sudo bash util/install.sh -a
 ```
+### iSulad
+> **openEuler 21.03**自带`yum`源下的`iSulad`存在问题，使用官方提供的`yum`源下载
+```bash
+cat << EOF > /etc/yum.repos.d/openEuler.repo
+[openEuler]
+baseurl=https://repo.openeuler.org/openEuler-20.03-LTS/OS/\$basearch
+enabled=1
+EOF
+yum install -y iSulad
+```
 
 > 若中途停止重新运行**第三步**，需清空`NestNet`同级目录下的依赖文件夹。
 
-## Isula 配置
+## 配置
 >官方提供镜像失效，替换Pod-sandbox-image,须手动更改isula配置
 
 ```bash
