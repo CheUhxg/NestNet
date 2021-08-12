@@ -1052,7 +1052,7 @@ class Nestnet(Mininet):
         # still provide any topo objects and init node lists
         Mininet.__init__(self, build=False, **params)
         self.SAPswitches = dict()
-        if topo and config:
+        if topo:
             self.buildFromTopo(topo, config)
 
     def addDocker(self, name, cls=Isula, config=None, **params):
